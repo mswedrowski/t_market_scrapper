@@ -124,3 +124,6 @@ venv.bak/
 pip-selfcheck.json
 
 # End of https://www.gitignore.io/api/code,venv,pycharm+all,jupyternotebooks
+
+/pages/*/*.html
+__pycache__/
