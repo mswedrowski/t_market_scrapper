@@ -23,22 +23,18 @@ def save_page(path, page):
 def fetch_and_save_page_for_league(league_name, league_initials, transfer_season, year):
     url = build_url(c.BASIC_URL, league_name, league_initials, transfer_season, year)
     page = fetch_page(url)
-    path = os.path.join(c.PAGES_PATH, league_name, f"{league_initials}_{transfer_season}_{year}.html")
+    path = os.path.join(c.PAGES_PATH, league_name, f"{league_initials}_{year}_{transfer_season}.html")
     save_page(path, page)
 
 
 if __name__ == "__main__":
-    # leagues = c.LEAGUES
-    # years = c.YEARS
-    # transfer_seasons = c.TRANSFER_SEASONS
-
-    leagues = [c.LEAGUES[0]]
-    years = [2018, 2019]
+    leagues = c.LEAGUES
+    years = c.YEARS
     transfer_seasons = c.TRANSFER_SEASONS
 
     print("SCRAPING...")
     for league_name, league_initials in leagues:
         for year in years:
             for transfer_season in transfer_seasons:
-                print(f"{league_initials}_{transfer_season}_{year}")
+                print(f"{league_initials}_{year}_{transfer_season}")
                 fetch_and_save_page_for_league(league_name, league_initials, transfer_season, year)
