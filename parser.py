@@ -2,17 +2,21 @@ from bs4 import BeautifulSoup
 import numpy as np
 import pandas as pd
 import os
+from easymoney.money import EasyPeasy
 
 import constants as c
 
+ep = EasyPeasy()
 
 class Node:
-    def __init__(self, uid: int, name: str, group: str = "", start: str = "", end: str = "", lat: float = 0, lng: float = 0, notes: str = ""):
+    def __init__(self, uid: int, name: str, year: int, season: str, group: str = "", lat: float = 0, lng: float = 0, notes: str = ""):
         self.uid = uid
         self.name = name
         self.group = group
-        self.start = start
-        self.end = end
+        self.year = year
+        self.season = season
+        self.start = convert_time(year, season)
+        self.end = convert_time(2020, c.SUMMER_TRANSFER_SEASON)
         self.lat = lat
         self.lng = lng
         self.notes = notes
@@ -22,10 +26,11 @@ class Node:
 
 
 class Edge:
-    def __init__(self, source: int, target: int, weight: float, year: int, season: str, notes: str = ""):
+    def __init__(self, source: int, target: int, weight: float, weight_norm: float, year: int, season: str, notes: str = ""):
         self.source = source
         self.target = target
         self.weight = weight
+        self.weight_norm = weight_norm
         self.year = year
         self.season = season
         self.start = convert_time(year, season)
@@ -57,19 +62,23 @@ def convert_time(year, season) -> str:
         raise ValueError()
 
 
-def convert_fee(fee: str) -> int:
+def convert_fee(fee: str, year) -> int:
     if fee == "Free transfer":
-        return 0
+        fee_transformed = 0
     elif "m" in fee:
         fee_split = fee[1:-1].split(sep=".")
         big = int(fee_split[0])
         small = int(fee_split[1])
-        return big * 1_000_000 + small * 10_000
+        fee_transformed = big * 1_000_000 + small * 10_000
     elif "Th." in fee:
-        return int(fee[1:-3]) * 1_000
+        fee_transformed = int(fee[1:-3]) * 1_000
+    elif len(fee) == 4:  # e.g. '€500'
+        fee_transformed = int(fee[1:])
     else:
         raise ValueError()
 
+    return fee_transformed, int(ep.normalize(amount=fee_transformed, region="DEU", from_year=year))
+    # return fee_transformed
 
 def parse_page(page, league_name, league_initials, transfer_season, year):
     soup = BeautifulSoup(page, 'html.parser')
@@ -83,8 +92,10 @@ def parse_page(page, league_name, league_initials, transfer_season, year):
             to_club_node = Node(
                 get_next_node_id(),
                 to_club_name,
+                year,
+                transfer_season
             )
-            NODES[to_club_node.uid] = to_club_node
+            NODES[to_club_node.name] = to_club_node
 
         to_club_node.group = league_name  # also for already existing nodes, which were created below with missing group label
 
@@ -101,7 +112,7 @@ def parse_page(page, league_name, league_initials, transfer_season, year):
             player_market_value = player_features[5].text
             from_club_name = player_features[6].find('img')['alt'].strip()
             fee = player_features[8].text
-            if "€" not in fee and 'Free transfer' not in fee or "Loan fee" in fee:
+            if "€" not in fee and 'Free transfer' not in fee or "Loan fee" in fee or "?" in fee or "-" in fee:
                 continue
 
             if from_club_name in NODES:
@@ -110,23 +121,26 @@ def parse_page(page, league_name, league_initials, transfer_season, year):
                 from_club_node = Node(
                     get_next_node_id(),
                     from_club_name,
+                    year,
+                    transfer_season
                 )
-                NODES[from_club_node.uid] = from_club_node
+                NODES[from_club_node.name] = from_club_node
 
-            transfer = Edge(from_club_node.uid, to_club_node.uid, convert_fee(fee), year, transfer_season, notes=player_name)
+            fee, fee_normalized = convert_fee(fee, year)
+            transfer = Edge(from_club_node.uid, to_club_node.uid, fee, fee_normalized, year, transfer_season, notes=player_name)
             EDGES.append(transfer)
 
 
 def save_nodes_and_edges(nodes, edges):
     with open(os.path.join(c.RESULTS_PATH, "nodes.csv"), 'w') as f:
-        f.write("uid, name, group, start, end, lat, lng, notes\n")
+        f.write("uid,name,group,year,season,start,end,lat,lng,notes\n")
         for n in nodes.values():
-            f.write(f"{n.uid}, {n.name}, {n.group}, {n.start}, {n.end}, {n.lat}, {n.lng}, {n.notes}\n")
+            f.write(f"{n.uid},{n.name},{n.group},{n.year},{n.season},{n.start},{n.end},{n.lat},{n.lng},{n.notes}\n")
 
     with open(os.path.join(c.RESULTS_PATH, "edges.csv"), 'w') as f:
-        f.write("source, target, weight, year, season, start, end, notes\n")
+        f.write("source,target,weight,weight_norm,year,season,start,end,notes\n")
         for e in edges:
-            f.write(f"{e.source}, {e.target}, {e.weight}, {e.year}, {e.season}, {e.start}, {e.end}, {e.notes}\n")
+            f.write(f"{e.source},{e.target},{e.weight},{e.weight_norm},{e.year},{e.season},{e.start},{e.end},{e.notes}\n")
 
 
 if __name__ == "__main__":
@@ -134,9 +148,9 @@ if __name__ == "__main__":
     years = c.YEARS
     transfer_seasons = c.TRANSFER_SEASONS
 
-    # leagues = [c.LEAGUES[0]]
-    # years = [2015]
-    # transfer_seasons = [c.WINTER_TRANSFER_SEASON]
+    # leagues = [c.LEAGUES[3]]
+    # years = [2011]
+    # transfer_seasons = [c.SUMMER_TRANSFER_SEASON]
 
     NODES = {}
     EDGES = []
