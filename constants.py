@@ -2,6 +2,7 @@ import os
 
 PROJECT_DIR = os.path.normpath(os.path.dirname(__file__))
 PAGES_PATH = os.path.join(PROJECT_DIR, "pages")
+RESULTS_PATH = os.path.join(PROJECT_DIR, "results")
 
 headers = {'User-Agent':
            'Mozilla/5.0 (X11; Linux x86_64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/47.0.2526.106 Safari/537.36'}
