@@ -1,10 +1,33 @@
+import os
+
+PROJECT_DIR = os.path.normpath(os.path.dirname(__file__))
+PAGES_PATH = os.path.join(PROJECT_DIR, "pages")
+RESULTS_PATH = os.path.join(PROJECT_DIR, "results")
+
 headers = {'User-Agent':
            'Mozilla/5.0 (X11; Linux x86_64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/47.0.2526.106 Safari/537.36'}
 
-BASIC_URL = 'https://www.t.com'
+BASIC_URL = 'https://www.transfermarkt.com'
 
 WINTER_TRANSFER_SEASON = "wintertransfers"
 SUMMER_TRANSFER_SEASON = "sommertransfers"
 
-PREMIER_LEAGUE = "premier-league"
-PREMIER_LEAGUE_INITIALS = "GB1"
+TRANSFER_SEASONS = [WINTER_TRANSFER_SEASON, SUMMER_TRANSFER_SEASON]
+
+PREMIER_LEAGUE_NAME, PREMIER_LEAGUE_INITIALS = "premier-league", "GB1"
+LA_LIGA_NAME, LA_LIGA_INITIALS = "laliga", "ES1"
+BUNDESLIGA_NAME, BUNDESLIGA_INITIALS = "1-bundesliga", "L1"
+SERIEA_LEAGUE_NAME, SERIEA_INITIALS = "serie-a", "IT1"
+LIGUE1_LEAGUE_NAME, LIGUE1_INITIALS = "ligue-1", "FR1"
+PREMIER_LIGA_LEAGUE_NAME, PREMIER_LIGA_INITIALS = "premier-liga", "RU1"
+
+LEAGUES = [
+    (PREMIER_LEAGUE_NAME, PREMIER_LEAGUE_INITIALS),
+    (LA_LIGA_NAME, LA_LIGA_INITIALS),
+    (BUNDESLIGA_NAME, BUNDESLIGA_INITIALS),
+    (SERIEA_LEAGUE_NAME, SERIEA_INITIALS),
+    (LIGUE1_LEAGUE_NAME, LIGUE1_INITIALS),
+    (PREMIER_LIGA_LEAGUE_NAME, PREMIER_LIGA_INITIALS)
+]
+
+YEARS = list(range(2010, 2020))
