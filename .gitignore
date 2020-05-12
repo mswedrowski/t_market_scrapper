@@ -128,3 +128,4 @@ pip-selfcheck.json
 /pages/*/*.html
 /results/*.csv
 __pycache__/
+*.zip
