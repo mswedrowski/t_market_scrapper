@@ -3,16 +3,18 @@ import numpy as np
 import pandas as pd
 import os
 from easymoney.money import EasyPeasy
+from typing import Tuple
 
 import constants as c
 
 ep = EasyPeasy()
 
 class Node:
-    def __init__(self, uid: int, name: str, year: int, season: str, group: str = "", lat: float = 0, lng: float = 0, notes: str = ""):
+    def __init__(self, uid: int, name: str, year: int, season: str, country: str, group: str = "", lat: float = 0, lng: float = 0, notes: str = ""):
         self.uid = uid
         self.name = name
         self.group = group
+        self.country = country
         self.year = year
         self.season = season
         self.start = convert_time(year, season)
@@ -62,7 +64,7 @@ def convert_time(year, season) -> str:
         raise ValueError()
 
 
-def convert_fee(fee: str, year) -> int:
+def convert_fee(fee: str, year) -> Tuple[int, int]:
     if fee == "Free transfer":
         fee_transformed = 0
     elif "m" in fee:
@@ -82,6 +84,7 @@ def convert_fee(fee: str, year) -> int:
 
 def parse_page(page, league_name, league_initials, transfer_season, year):
     soup = BeautifulSoup(page, 'html.parser')
+    league_country = soup.find("div", {"class": "flagge"}).find('img')['alt'].strip()
 
     club_table_headers = soup.find_all("div", {"class": "table-header"})[1:]
     for club_table_header in club_table_headers:
@@ -90,10 +93,11 @@ def parse_page(page, league_name, league_initials, transfer_season, year):
             to_club_node = NODES[to_club_name]
         else:
             to_club_node = Node(
-                get_next_node_id(),
-                to_club_name,
-                year,
-                transfer_season
+                uid=get_next_node_id(),
+                name=to_club_name,
+                year=year,
+                season=transfer_season,
+                country=league_country
             )
             NODES[to_club_node.name] = to_club_node
 
@@ -105,24 +109,34 @@ def parse_page(page, league_name, league_initials, transfer_season, year):
             player_features = player.find_all("td")
             if "No new arrivals" in player_features[0].text:
                 continue
+
+            fee = player_features[8].text
+            if "€" not in fee and 'Free transfer' not in fee or "Loan fee" in fee or "?" in fee or "-" in fee:
+                continue
+            from_club_name = player_features[6].find('img')['alt'].strip()
+            if from_club_name == "Unknown":
+                continue
             player_name = player_features[0].find("a", {"class": "spielprofil_tooltip"}).text
             player_age = player_features[1].text
             player_nationality = player_features[2].find('img')['alt']
             player_position = player_features[3].text
             player_market_value = player_features[5].text
-            from_club_name = player_features[6].find('img')['alt'].strip()
-            fee = player_features[8].text
-            if "€" not in fee and 'Free transfer' not in fee or "Loan fee" in fee or "?" in fee or "-" in fee:
-                continue
+            if from_club_name == "Career break" or from_club_name == "Without Club":
+                from_club_country = "NA"
+            else:
+                from_club_country = player_features[7].find('img')['alt'].strip()
+                if from_club_country == "Korea, South":
+                    from_club_country = "South Korea"
 
             if from_club_name in NODES:
                 from_club_node = NODES[from_club_name]
             else:
                 from_club_node = Node(
-                    get_next_node_id(),
-                    from_club_name,
-                    year,
-                    transfer_season
+                    uid=get_next_node_id(),
+                    name=from_club_name,
+                    year=year,
+                    season=transfer_season,
+                    country=from_club_country
                 )
                 NODES[from_club_node.name] = from_club_node
 
@@ -133,12 +147,12 @@ def parse_page(page, league_name, league_initials, transfer_season, year):
 
 def save_nodes_and_edges(nodes, edges):
     with open(os.path.join(c.RESULTS_PATH, "nodes.csv"), 'w') as f:
-        f.write("uid,name,group,year,season,start,end,lat,lng,notes\n")
+        f.write("id,label,group,country,year,season,start,end,lat,lng,notes\n")
         for n in nodes.values():
-            f.write(f"{n.uid},{n.name},{n.group},{n.year},{n.season},{n.start},{n.end},{n.lat},{n.lng},{n.notes}\n")
+            f.write(f"{n.uid},{n.name},{n.group},{n.country},{n.year},{n.season},{n.start},{n.end},{n.lat},{n.lng},{n.notes}\n")
 
     with open(os.path.join(c.RESULTS_PATH, "edges.csv"), 'w') as f:
-        f.write("source,target,weight,weight_norm,year,season,start,end,notes\n")
+        f.write("source,target,weight_not_norm,weight,year,season,start,end,label\n")
         for e in edges:
             f.write(f"{e.source},{e.target},{e.weight},{e.weight_norm},{e.year},{e.season},{e.start},{e.end},{e.notes}\n")
 
@@ -147,10 +161,6 @@ if __name__ == "__main__":
     leagues = c.LEAGUES
     years = c.YEARS
     transfer_seasons = c.TRANSFER_SEASONS
-
-    # leagues = [c.LEAGUES[3]]
-    # years = [2011]
-    # transfer_seasons = [c.SUMMER_TRANSFER_SEASON]
 
     NODES = {}
     EDGES = []
