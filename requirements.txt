@@ -4,3 +4,7 @@ requests
 lxml
 pandas
 easymoney
+pathpy2
+jupyter
+matplotlib
+seaborn

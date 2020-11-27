@@ -1,0 +1,5 @@
+ORA
+
+https://ieeexplore.ieee.org/document/6412380
+http://estebanmoro.org/post/2015-12-21-temporal-networks-with-r-and-igraph-updated/
+http://www.casos.cs.cmu.edu/tools/index.php
